@@ -1,10 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import MainCanvas from './components/MainCanvas';
+import GlobalSearch from './components/GlobalSearch';
+import { initializeSearchIndex } from './lib/search';
 
 function App() {
   const [activeSheetId, setActiveSheetId] = useState(null);
+  const [isLocalSearchOpen, setLocalSearchOpen] = useState(false);
+  const [isGlobalSearchOpen, setGlobalSearchOpen] = useState(false);
+
+  // When jumping from global search, we need to instruct the canvas to highlight a specific blob across renders
+  const [pendingGlobalHighlightId, setPendingGlobalHighlightId] = useState(null);
+
+  useEffect(() => {
+    initializeSearchIndex();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'F' && e.shiftKey && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        setGlobalSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleGlobalSearchResult = (worksheetId, blobId) => {
+    setGlobalSearchOpen(false);
+    
+    // Switch worksheet if needed
+    if (activeSheetId !== worksheetId) {
+      setActiveSheetId(worksheetId);
+    }
+    
+    // Set the target blob ID to jump to when canvas handles it
+    setPendingGlobalHighlightId(blobId);
+    
+    // Auto open local search on the new canvas purely for UI consistency / persistent highlights
+    setLocalSearchOpen(true);
+  };
 
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
@@ -12,7 +49,13 @@ function App() {
       
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         {activeSheetId ? (
-          <MainCanvas sheetId={activeSheetId} />
+          <MainCanvas 
+            sheetId={activeSheetId} 
+            isLocalSearchOpen={isLocalSearchOpen} 
+            setLocalSearchOpen={setLocalSearchOpen} 
+            pendingGlobalHighlightId={pendingGlobalHighlightId}
+            clearPendingGlobalHighlight={() => setPendingGlobalHighlightId(null)}
+          />
         ) : (
           <div style={{ 
             display: 'flex', 
@@ -44,6 +87,12 @@ function App() {
           </div>
         )}
       </div>
+
+      <GlobalSearch 
+        isOpen={isGlobalSearchOpen} 
+        onClose={() => setGlobalSearchOpen(false)} 
+        onSelectResult={handleGlobalSearchResult} 
+      />
     </div>
   );
 }

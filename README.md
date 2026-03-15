@@ -57,6 +57,8 @@ Whenever you want to run and use the application:
 - **Select Node:** Click on a Blob to open the right-hand editor panel.
 - **Create Connection:** Hover over a Blob, click on one of the colored circular handles along its edge, and drag a line to another Blob's handle.
 - **Create New Blob:** Use the **"Add Blob"** button in the top toolbar, or press the `N` key on your keyboard when you aren't typing inside an input box.
+- **Local Search:** Press `F` to open the search bar for the current worksheet. Press `Enter` or `Shift + Enter` to cycle through matches.
+- **Global Search:** Press `Shift + F` to open the comprehensive search modal that spans all your worksheets.
 - **Toggle Selection Mode:** Use the **"Select"** toggle in the top toolbar to disable panning if you need to drag a selection box around multiple nodes.
 - **Show Minimap:** Click the map icon in the top toolbar to see a zoomed-out preview of your entire worksheet.
 

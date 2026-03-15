@@ -4,7 +4,14 @@ import { Handle, Position } from 'reactflow';
 export default memo(function BlobNode({ data, selected }) {
   const color = data.color || 'var(--sidebar-bg)';
   const border = selected ? 'var(--accent-color)' : 'var(--blob-border)';
-  const shadow = selected ? '0 0 0 2px rgba(88, 166, 255, 0.3), var(--blob-shadow)' : 'var(--blob-shadow)';
+  
+  let shadow = 'var(--blob-shadow)';
+  if (data.isHighlighted) {
+    shadow = '0 0 0 4px rgba(234, 179, 8, 0.6), 0 0 20px rgba(234, 179, 8, 0.4)'; // glowing yellow outline
+    if (selected) shadow += ', 0 0 0 2px rgba(88, 166, 255, 0.3)'; // keep selection ring compatible
+  } else if (selected) {
+    shadow = '0 0 0 2px rgba(88, 166, 255, 0.3), var(--blob-shadow)';
+  }
 
   return (
     <div 

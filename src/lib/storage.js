@@ -74,6 +74,8 @@ export const loadWorksheet = async (id) => {
   }
 };
 
+import { updateWorksheetIndex, removeWorksheetFromIndex } from './search';
+
 /**
  * Save / Update an existing worksheet with latest nodes/edges
  */
@@ -98,6 +100,9 @@ export const saveWorksheet = async (id, data) => {
       }
     }
     
+    // Update Search Index
+    updateWorksheetIndex(id, updated.name || 'Untitled', updated.nodes);
+    
     return updated;
   } catch (err) {
     console.error(`Error saving worksheet ${id}:`, err);
@@ -115,6 +120,10 @@ export const deleteWorksheet = async (id) => {
     await saveWorksheetsList(newList);
     
     await localforage.removeItem(`ws_${id}`);
+    
+    // Remove from Search Index
+    removeWorksheetFromIndex(id);
+    
     return true;
   } catch (err) {
     console.error(`Error deleting worksheet ${id}:`, err);
