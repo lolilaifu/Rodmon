@@ -16,18 +16,24 @@ import Toolbar from './Toolbar';
 import BlobNode from './BlobNode';
 import BlobEditor from './BlobEditor';
 import LocalSearch from './LocalSearch';
+import DeleteModal from './DeleteModal';
+import ContextMenu from './ContextMenu';
 
 const nodeTypes = {
   blobNode: BlobNode
 };
 
-function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlobalHighlightId, clearPendingGlobalHighlight }) {
+function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlobalHighlightId, clearPendingGlobalHighlight, isCaseSensitiveSearch, setCaseSensitiveSearch }) {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [showMinimap, setShowMinimap] = useState(false);
   const [connectionMode, setConnectionMode] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   
+  // Deletion state
+  const [blobToDelete, setBlobToDelete] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+
   // Search state
   const [activeSearchBlobId, setActiveSearchBlobId] = useState(null);
 
@@ -99,21 +105,84 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
     }, 10);
   };
 
+  const confirmDeleteBlob = useCallback((ids) => {
+    const idSet = new Set(Array.isArray(ids) ? ids : [ids]);
+    setNodes(nds => nds.filter(n => !idSet.has(n.id)));
+    setEdges(eds => eds.filter(e => !idSet.has(e.source) && !idSet.has(e.target)));
+    if (idSet.has(selectedNodeId)) setSelectedNodeId(null);
+    setBlobToDelete(null);
+  }, [selectedNodeId]);
+
+  const handleDeleteAction = useCallback((specificType = null, specificId = null) => {
+    if (specificType && specificId) {
+      if (specificType === 'node') {
+        const skipConfirm = localStorage.getItem('skipBlobDeleteConfirm') === 'true';
+        if (skipConfirm) confirmDeleteBlob([specificId]);
+        else setBlobToDelete([specificId]);
+      } else if (specificType === 'edge') {
+        setEdges(eds => eds.filter(e => e.id !== specificId));
+      }
+      return;
+    }
+
+    const selectedNodes = nodes.filter(n => n.selected);
+    const selectedEdges = edges.filter(e => e.selected);
+
+    if (selectedNodes.length > 0) {
+      const skipConfirm = localStorage.getItem('skipBlobDeleteConfirm') === 'true';
+      const ids = selectedNodes.map(n => n.id);
+      if (skipConfirm) {
+        confirmDeleteBlob(ids);
+      } else {
+        setBlobToDelete(ids);
+      }
+    } else if (selectedEdges.length > 0) {
+      const edgeIds = new Set(selectedEdges.map(e => e.id));
+      setEdges(eds => eds.filter(e => !edgeIds.has(e.id)));
+    }
+  }, [nodes, edges, confirmDeleteBlob]);
+
+  const latestHandleDeleteRef = useRef(handleDeleteAction);
+  useEffect(() => { latestHandleDeleteRef.current = handleDeleteAction; }, [handleDeleteAction]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Use node selection standard keys (Backspace/Delete automatically handled by React Flow when focused)
-      // Custom short cut N for new blob
-      if (e.key === 'n' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+      const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+      
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
+        e.preventDefault();
+        latestHandleDeleteRef.current();
+      }
+      
+      if (e.key === 'Escape' && !isInput) {
+        setNodes(nds => nds.map(n => ({...n, selected: false})));
+        setEdges(eds => eds.map(e => ({...e, selected: false})));
+        setSelectedNodeId(null);
+        setContextMenu(null);
+        setBlobToDelete(null);
+      }
+
+      if (e.key === 'n' && !isInput) {
         handleAddBlob();
       }
-      // F to open local search
-      if (e.key === 'f' && !e.shiftKey && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+
+      if (e.key === 'f' && !e.shiftKey && !isInput) {
         e.preventDefault();
         setLocalSearchOpen(true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const onNodeContextMenu = useCallback((event, node) => {
+    event.preventDefault();
+    setContextMenu({ x: event.clientX, y: event.clientY, id: node.id, type: 'node' });
+  }, []);
+
+  const onEdgeContextMenu = useCallback((event, edge) => {
+    event.preventDefault();
+    setContextMenu({ x: event.clientX, y: event.clientY, id: edge.id, type: 'edge' });
   }, []);
 
   const selectedNodeData = selectedNodeId ? nodes.find(n => n.id === selectedNodeId)?.data : null;
@@ -192,6 +261,8 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
         onClose={() => setLocalSearchOpen(false)} 
         worksheetId={sheetId}
         onSelectResult={handleSelectSearchResult}
+        isCaseSensitive={isCaseSensitiveSearch}
+        setCaseSensitive={setCaseSensitiveSearch}
       />
       
       <ReactFlow
@@ -200,14 +271,18 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeContextMenu={onNodeContextMenu}
+        onEdgeContextMenu={onEdgeContextMenu}
+        onPaneClick={() => setContextMenu(null)}
         nodeTypes={nodeTypes}
         panOnScroll={true}
         zoomOnScroll={true}
         panOnDrag={!connectionMode}
         selectionOnDrag={connectionMode}
+        deleteKeyCode={null} // We intercept delete keys manually 
         fitViewOptions={{ padding: 0.2 }}
         proOptions={{ hideAttribution: true }}
-        defaultEdgeOptions={{ style: { strokeWidth: 2, stroke: 'var(--text-muted)' } }}
+        defaultEdgeOptions={{ style: { strokeWidth: 2, stroke: 'var(--text-muted)' }, interactionWidth: 20 }}
       >
         <Background color="rgba(255,255,255,0.05)" gap={24} size={2} />
         <Controls position="bottom-left" />
@@ -226,17 +301,30 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
         nodeId={selectedNodeId}
         nodeData={selectedNodeData}
         onUpdate={(newData) => updateNodeData(selectedNodeId, newData)}
+        onDeleteRequest={() => handleDeleteAction('node', selectedNodeId)}
         onClose={() => {
           setNodes((nds) => nds.map(n => ({...n, selected: false})));
           setSelectedNodeId(null);
         }}
+      />
+
+      <DeleteModal 
+        isOpen={!!blobToDelete} 
+        onClose={() => setBlobToDelete(null)} 
+        onConfirm={() => confirmDeleteBlob(blobToDelete)} 
+      />
+
+      <ContextMenu 
+        menu={contextMenu} 
+        onClose={() => setContextMenu(null)} 
+        onDelete={(type, id) => handleDeleteAction(type, id)} 
       />
     </div>
   );
 }
 
 // Ensure the wrapper is provided for useReactFlow
-export default function MainCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlobalHighlightId, clearPendingGlobalHighlight }) {
+export default function MainCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlobalHighlightId, clearPendingGlobalHighlight, isCaseSensitiveSearch, setCaseSensitiveSearch }) {
   return (
     <ReactFlowProvider>
       <FlowCanvas 
@@ -245,6 +333,8 @@ export default function MainCanvas({ sheetId, isLocalSearchOpen, setLocalSearchO
         setLocalSearchOpen={setLocalSearchOpen} 
         pendingGlobalHighlightId={pendingGlobalHighlightId}
         clearPendingGlobalHighlight={clearPendingGlobalHighlight}
+        isCaseSensitiveSearch={isCaseSensitiveSearch}
+        setCaseSensitiveSearch={setCaseSensitiveSearch}
       />
     </ReactFlowProvider>
   );

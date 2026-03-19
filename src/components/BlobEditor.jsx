@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { X, Palette } from 'lucide-react';
+import { X, Palette, Trash2 } from 'lucide-react';
 
 const COLORS = [
   'var(--sidebar-bg)', // default glass
@@ -11,7 +11,7 @@ const COLORS = [
   'rgba(139, 92, 246, 0.15)', // purple
 ];
 
-export default function BlobEditor({ isOpen, nodeId, nodeData, onUpdate, onClose }) {
+export default function BlobEditor({ isOpen, nodeId, nodeData, onUpdate, onClose, onDeleteRequest }) {
   const [isEditingData, setIsEditingData] = useState(false);
 
   // If node changes, reset edit mode
@@ -153,6 +153,32 @@ export default function BlobEditor({ isOpen, nodeId, nodeData, onUpdate, onClose
             }}
             placeholder="e.g. priority, frontend, meeting"
           />
+        </div>
+
+        {/* Delete Button */}
+        <div style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex' }}>
+          <button 
+            onClick={onDeleteRequest}
+            style={{ 
+              width: '100%', 
+              padding: '10px', 
+              border: '1px solid rgba(255, 107, 107, 0.3)', 
+              borderRadius: '6px', 
+              background: 'rgba(255, 107, 107, 0.1)', 
+              color: '#ff6b6b', 
+              fontWeight: '600', 
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              transition: 'background 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 107, 107, 0.2)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)'}
+          >
+            <Trash2 size={16} /> Delete Blob
+          </button>
         </div>
 
       </div>

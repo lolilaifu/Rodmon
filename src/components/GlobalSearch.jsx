@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, File, Tag } from 'lucide-react';
 import { performSearch } from '../lib/search';
 
-export default function GlobalSearch({ isOpen, onClose, onSelectResult }) {
+export default function GlobalSearch({ isOpen, onClose, onSelectResult, isCaseSensitive, setCaseSensitive }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -12,6 +13,7 @@ export default function GlobalSearch({ isOpen, onClose, onSelectResult }) {
       setTimeout(() => inputRef.current?.focus(), 50);
       setQuery('');
       setResults([]);
+      setActiveIndex(-1);
     }
   }, [isOpen]);
 
@@ -23,21 +25,39 @@ export default function GlobalSearch({ isOpen, onClose, onSelectResult }) {
 
     const timer = setTimeout(() => {
       // Global search doesn't restrict to a worksheetId
-      const res = performSearch(query);
+      const res = performSearch(query, null, isCaseSensitive);
       setResults(res);
+      setActiveIndex(res.length > 0 ? 0 : -1);
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [query, isOpen]);
+  }, [query, isOpen, isCaseSensitive]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!isOpen) return;
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveIndex(prev => prev >= results.length - 1 ? 0 : prev + 1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveIndex(prev => prev <= 0 ? results.length - 1 : prev - 1);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (results.length > 0 && activeIndex >= 0 && activeIndex < results.length) {
+          const selected = results[activeIndex];
+          onSelectResult(selected.worksheetId, selected.blobId);
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, results, activeIndex, onClose, onSelectResult]);
 
   if (!isOpen) return null;
 
@@ -104,7 +124,29 @@ export default function GlobalSearch({ isOpen, onClose, onSelectResult }) {
               padding: 0
             }}
           />
-          <button onClick={onClose} style={{ color: 'var(--text-muted)' }}>
+
+          <button 
+            onClick={() => setCaseSensitive(!isCaseSensitive)}
+            title={isCaseSensitive ? "Case Sensitive Search Enabled" : "Enable Case Sensitive Search"}
+            style={{
+              marginLeft: '8px',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              background: isCaseSensitive ? 'rgba(88, 166, 255, 0.2)' : 'transparent',
+              color: isCaseSensitive ? 'var(--accent-color)' : 'var(--text-muted)',
+              border: isCaseSensitive ? '1px solid var(--accent-color)' : '1px solid transparent',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              fontFamily: 'monospace',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              outline: 'none'
+            }}
+          >
+            Aa
+          </button>
+          
+          <button onClick={onClose} style={{ marginLeft: '12px', color: 'var(--text-muted)' }}>
             <X size={20} />
           </button>
         </div>
@@ -132,21 +174,25 @@ export default function GlobalSearch({ isOpen, onClose, onSelectResult }) {
                 <File size={12} /> {group.name}
               </div>
               
-              {group.items.map(res => (
-                <div 
-                  key={res.blobId}
-                  onClick={() => onSelectResult(wsId, res.blobId)}
-                  style={{
-                    padding: '12px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
+              {group.items.map((res) => {
+                const isSelected = results[activeIndex]?.blobId === res.blobId;
+                return (
+                  <div 
+                    key={res.blobId}
+                    onClick={() => onSelectResult(wsId, res.blobId)}
+                    style={{
+                      padding: '12px 20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                      background: isSelected ? 'rgba(88, 166, 255, 0.15)' : 'transparent',
+                      borderLeft: isSelected ? '3px solid var(--accent-color)' : '3px solid transparent',
+                    }}
+                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                    onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
+                  >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <span style={{ fontSize: '15px', color: 'var(--text-main)', fontWeight: '500' }}>
                       {res.blobName || 'Untitled Blob'}
@@ -163,7 +209,8 @@ export default function GlobalSearch({ isOpen, onClose, onSelectResult }) {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ))}
         </div>
@@ -176,7 +223,7 @@ export default function GlobalSearch({ isOpen, onClose, onSelectResult }) {
           display: 'flex',
           justifyContent: 'space-between'
         }}>
-          <span><strong>ESC</strong> to close</span>
+          <span><strong>↑↓</strong> to navigate • <strong>Enter</strong> to select • <strong>ESC</strong> to close</span>
           <span>Searching {Object.keys(groupedResults).length} worksheets</span>
         </div>
       </div>

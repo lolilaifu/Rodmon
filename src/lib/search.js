@@ -83,12 +83,15 @@ export const removeWorksheetFromIndex = (worksheetId) => {
  * @param {string|null} restrictToWorksheetId If provided, searches only within this worksheet (Local Search)
  * @returns {Array} Array of sorted results matching the query
  */
-export const performSearch = (query, restrictToWorksheetId = null) => {
+export const performSearch = (query, restrictToWorksheetId = null, isCaseSensitive = false) => {
   if (!isIndexReady || !query || query.trim() === '') return [];
   
-  const lowerQuery = query.toLowerCase().trim();
-  const isTagSearch = lowerQuery.startsWith('#');
-  const searchStr = isTagSearch ? lowerQuery.substring(1).trim() : lowerQuery; // Remove # if tag search
+  const rawQuery = query.trim();
+  const isTagSearch = rawQuery.startsWith('#');
+  
+  // Extracting search string, without the tag prefix if tag search
+  const originalSearchStr = isTagSearch ? rawQuery.substring(1).trim() : rawQuery;
+  const searchStr = isCaseSensitive ? originalSearchStr : originalSearchStr.toLowerCase();
   
   const results = [];
 
@@ -104,16 +107,20 @@ export const performSearch = (query, restrictToWorksheetId = null) => {
       let score = 0;
       let matchedField = null;
 
-      const nameLower = (blobData.name || '').toLowerCase();
-      const contentLower = (blobData.content || '').toLowerCase();
-      const tagsLower = Array.isArray(blobData.tags) ? blobData.tags.map(t => typeof t === 'string' ? t.toLowerCase() : '') : [];
+      const nameVal = blobData.name || '';
+      const contentVal = blobData.content || '';
+      const tagsVal = Array.isArray(blobData.tags) ? blobData.tags.map(t => typeof t === 'string' ? t : '') : [];
+
+      const nameToMatch = isCaseSensitive ? nameVal : nameVal.toLowerCase();
+      const contentToMatch = isCaseSensitive ? contentVal : contentVal.toLowerCase();
+      const tagsToMatch = isCaseSensitive ? tagsVal : tagsVal.map(t => typeof t === 'string' ? t.toLowerCase() : '');
 
       if (isTagSearch) {
         // Strict tag priority matching
-        if (tagsLower.some(t => t.includes(searchStr))) {
+        if (tagsToMatch.some(t => t.includes(searchStr))) {
           score += 10;
           matchedField = 'tag';
-        } else if (nameLower.includes(searchStr)) {
+        } else if (nameToMatch.includes(searchStr)) {
           score += 2;
           matchedField = 'name';
         }
@@ -121,24 +128,24 @@ export const performSearch = (query, restrictToWorksheetId = null) => {
         // Standard fuzzy substring scoring
         
         // Exact exact name match
-        if (nameLower === searchStr) {
+        if (nameToMatch === searchStr) {
           score += 20;
           matchedField = 'name';
         } 
         // Partial name match
-        else if (nameLower.includes(searchStr)) {
+        else if (nameToMatch.includes(searchStr)) {
           score += 10;
           matchedField = 'name';
         }
         
         // Tag match
-        if (tagsLower.some(t => t.includes(searchStr))) {
+        if (tagsToMatch.some(t => t.includes(searchStr))) {
           score += 8;
           if (!matchedField) matchedField = 'tag';
         }
         
         // Content match
-        if (contentLower.includes(searchStr)) {
+        if (contentToMatch.includes(searchStr)) {
           score += 5;
           if (!matchedField) matchedField = 'content';
         }

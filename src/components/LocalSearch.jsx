@@ -6,46 +6,53 @@ export default function LocalSearch({
   isOpen, 
   onClose, 
   worksheetId, 
-  onSelectResult 
+  onSelectResult,
+  isCaseSensitive,
+  setCaseSensitive
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [activeIndex, setActiveIndex] = useState(-1);
   const inputRef = useRef(null);
+  const onSelectResultRef = useRef(onSelectResult);
+
+  // Keep ref synced with latest callback without causing re-renders
+  useEffect(() => {
+    onSelectResultRef.current = onSelectResult;
+  }, [onSelectResult]);
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 50);
-      setQuery('');
-      setResults([]);
-      setActiveIndex(-1);
+      // We do not clear the query or results here, to maintain persistent state 
+      // when toggling the search bar visibility.
     }
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen || !query.trim()) {
+    if (!isOpen) return;
+
+    if (!query.trim()) {
       setResults([]);
       setActiveIndex(-1);
-      // If query is cleared, unset the active selection to remove highlights
-      if (isOpen && !query.trim()) {
-        onSelectResult(null);
-      }
+      onSelectResultRef.current(null);
       return;
     }
 
     const timer = setTimeout(() => {
-      const res = performSearch(query, worksheetId);
+      const res = performSearch(query, worksheetId, isCaseSensitive);
       setResults(res);
       setActiveIndex(res.length > 0 ? 0 : -1);
+      
       if (res.length > 0) {
-        onSelectResult(res[0].blobId);
+        onSelectResultRef.current(res[0].blobId);
       } else {
-        onSelectResult(null); // Clear selection if no results
+        onSelectResultRef.current(null); // Clear selection if no results
       }
     }, 150); // slight debounce for smooth typing
 
     return () => clearTimeout(timer);
-  }, [query, isOpen, worksheetId, onSelectResult]);
+  }, [query, isOpen, worksheetId, isCaseSensitive]); // REMOVED onSelectResult to fix dependency loop bug
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -66,7 +73,7 @@ export default function LocalSearch({
           newIndex = activeIndex >= results.length - 1 ? 0 : activeIndex + 1;
         }
         setActiveIndex(newIndex);
-        onSelectResult(results[newIndex].blobId);
+        onSelectResultRef.current(results[newIndex].blobId);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -112,6 +119,27 @@ export default function LocalSearch({
           }}
         />
         
+        <button 
+          onClick={() => setCaseSensitive(!isCaseSensitive)}
+          title={isCaseSensitive ? "Case Sensitive Search Enabled" : "Enable Case Sensitive Search"}
+          style={{
+            marginLeft: '8px',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            background: isCaseSensitive ? 'rgba(88, 166, 255, 0.2)' : 'transparent',
+            color: isCaseSensitive ? 'var(--accent-color)' : 'var(--text-muted)',
+            border: isCaseSensitive ? '1px solid var(--accent-color)' : '1px solid transparent',
+            fontSize: '13px',
+            fontWeight: 'bold',
+            fontFamily: 'monospace',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            outline: 'none'
+          }}
+        >
+          Aa
+        </button>
+
         {results.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '12px' }}>
             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -123,7 +151,7 @@ export default function LocalSearch({
                   if (results.length === 0) return;
                   const newIdx = activeIndex <= 0 ? results.length - 1 : activeIndex - 1;
                   setActiveIndex(newIdx);
-                  onSelectResult(results[newIdx].blobId);
+                  onSelectResultRef.current(results[newIdx].blobId);
                 }}
                 style={{ padding: '2px', color: 'var(--text-main)' }} title="Previous (Shift+Enter)"
               >
@@ -134,7 +162,7 @@ export default function LocalSearch({
                   if (results.length === 0) return;
                   const newIdx = activeIndex >= results.length - 1 ? 0 : activeIndex + 1;
                   setActiveIndex(newIdx);
-                  onSelectResult(results[newIdx].blobId);
+                  onSelectResultRef.current(results[newIdx].blobId);
                 }}
                 style={{ padding: '2px', color: 'var(--text-main)' }} title="Next (Enter)"
               >

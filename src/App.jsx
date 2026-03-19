@@ -9,6 +9,7 @@ function App() {
   const [activeSheetId, setActiveSheetId] = useState(null);
   const [isLocalSearchOpen, setLocalSearchOpen] = useState(false);
   const [isGlobalSearchOpen, setGlobalSearchOpen] = useState(false);
+  const [isCaseSensitiveSearch, setCaseSensitiveSearch] = useState(false);
 
   // When jumping from global search, we need to instruct the canvas to highlight a specific blob across renders
   const [pendingGlobalHighlightId, setPendingGlobalHighlightId] = useState(null);
@@ -55,6 +56,8 @@ function App() {
             setLocalSearchOpen={setLocalSearchOpen} 
             pendingGlobalHighlightId={pendingGlobalHighlightId}
             clearPendingGlobalHighlight={() => setPendingGlobalHighlightId(null)}
+            isCaseSensitiveSearch={isCaseSensitiveSearch}
+            setCaseSensitiveSearch={setCaseSensitiveSearch}
           />
         ) : (
           <div style={{ 
@@ -92,6 +95,8 @@ function App() {
         isOpen={isGlobalSearchOpen} 
         onClose={() => setGlobalSearchOpen(false)} 
         onSelectResult={handleGlobalSearchResult} 
+        isCaseSensitive={isCaseSensitiveSearch}
+        setCaseSensitive={setCaseSensitiveSearch}
       />
     </div>
   );
