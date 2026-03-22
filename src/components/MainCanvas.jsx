@@ -23,7 +23,7 @@ const nodeTypes = {
   blobNode: BlobNode
 };
 
-function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlobalHighlightId, clearPendingGlobalHighlight, isCaseSensitiveSearch, setCaseSensitiveSearch }) {
+function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlobalHighlightId, clearPendingGlobalHighlight, isCaseSensitiveSearch, setCaseSensitiveSearch, isFuzzySearch, setFuzzySearch }) {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
   const [showMinimap, setShowMinimap] = useState(false);
@@ -73,10 +73,17 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
   const onNodesChange = useCallback((changes) => {
     setNodes((nds) => applyNodeChanges(changes, nds));
     // Check if selection changed to update local state for the editor
-    const selectChange = changes.find(c => c.type === 'select');
-    if (selectChange) {
-      if (selectChange.selected) setSelectedNodeId(selectChange.id);
-      else setSelectedNodeId(prev => prev === selectChange.id ? null : prev);
+    const selectChanges = changes.filter(c => c.type === 'select');
+    if (selectChanges.length > 0) {
+      const newlySelected = selectChanges.find(c => c.selected);
+      if (newlySelected) {
+        setSelectedNodeId(newlySelected.id);
+      } else {
+        setSelectedNodeId(prev => {
+          const deselected = selectChanges.find(c => !c.selected && c.id === prev);
+          return deselected ? null : prev;
+        });
+      }
     }
     // Check for remove
     const removeChange = changes.find(c => c.type === 'remove');
@@ -263,6 +270,8 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
         onSelectResult={handleSelectSearchResult}
         isCaseSensitive={isCaseSensitiveSearch}
         setCaseSensitive={setCaseSensitiveSearch}
+        isFuzzySearch={isFuzzySearch}
+        setFuzzySearch={setFuzzySearch}
       />
       
       <ReactFlow
@@ -324,7 +333,7 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
 }
 
 // Ensure the wrapper is provided for useReactFlow
-export default function MainCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlobalHighlightId, clearPendingGlobalHighlight, isCaseSensitiveSearch, setCaseSensitiveSearch }) {
+export default function MainCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlobalHighlightId, clearPendingGlobalHighlight, isCaseSensitiveSearch, setCaseSensitiveSearch, isFuzzySearch, setFuzzySearch }) {
   return (
     <ReactFlowProvider>
       <FlowCanvas 
@@ -335,6 +344,8 @@ export default function MainCanvas({ sheetId, isLocalSearchOpen, setLocalSearchO
         clearPendingGlobalHighlight={clearPendingGlobalHighlight}
         isCaseSensitiveSearch={isCaseSensitiveSearch}
         setCaseSensitiveSearch={setCaseSensitiveSearch}
+        isFuzzySearch={isFuzzySearch}
+        setFuzzySearch={setFuzzySearch}
       />
     </ReactFlowProvider>
   );

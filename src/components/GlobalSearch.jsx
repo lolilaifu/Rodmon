@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, File, Tag } from 'lucide-react';
 import { performSearch } from '../lib/search';
 
-export default function GlobalSearch({ isOpen, onClose, onSelectResult, isCaseSensitive, setCaseSensitive }) {
+export default function GlobalSearch({ isOpen, onClose, onSelectResult, isCaseSensitive, setCaseSensitive, isFuzzySearch, setFuzzySearch }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -25,13 +25,13 @@ export default function GlobalSearch({ isOpen, onClose, onSelectResult, isCaseSe
 
     const timer = setTimeout(() => {
       // Global search doesn't restrict to a worksheetId
-      const res = performSearch(query, null, isCaseSensitive);
+      const res = performSearch(query, null, isCaseSensitive, isFuzzySearch);
       setResults(res);
       setActiveIndex(res.length > 0 ? 0 : -1);
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [query, isOpen, isCaseSensitive]);
+  }, [query, isOpen, isCaseSensitive, isFuzzySearch]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -144,6 +144,27 @@ export default function GlobalSearch({ isOpen, onClose, onSelectResult, isCaseSe
             }}
           >
             Aa
+          </button>
+
+          <button 
+            onClick={() => setFuzzySearch(!isFuzzySearch)}
+            title={isFuzzySearch ? "Fuzzy Search Enabled" : "Enable Fuzzy Search"}
+            style={{
+              marginLeft: '8px',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              background: isFuzzySearch ? 'rgba(88, 166, 255, 0.2)' : 'transparent',
+              color: isFuzzySearch ? 'var(--accent-color)' : 'var(--text-muted)',
+              border: isFuzzySearch ? '1px solid var(--accent-color)' : '1px solid transparent',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              fontFamily: 'monospace',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              outline: 'none'
+            }}
+          >
+            ~
           </button>
           
           <button onClick={onClose} style={{ marginLeft: '12px', color: 'var(--text-muted)' }}>

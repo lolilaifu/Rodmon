@@ -10,6 +10,7 @@ function App() {
   const [isLocalSearchOpen, setLocalSearchOpen] = useState(false);
   const [isGlobalSearchOpen, setGlobalSearchOpen] = useState(false);
   const [isCaseSensitiveSearch, setCaseSensitiveSearch] = useState(false);
+  const [isFuzzySearch, setFuzzySearch] = useState(true);
 
   // When jumping from global search, we need to instruct the canvas to highlight a specific blob across renders
   const [pendingGlobalHighlightId, setPendingGlobalHighlightId] = useState(null);
@@ -58,6 +59,8 @@ function App() {
             clearPendingGlobalHighlight={() => setPendingGlobalHighlightId(null)}
             isCaseSensitiveSearch={isCaseSensitiveSearch}
             setCaseSensitiveSearch={setCaseSensitiveSearch}
+            isFuzzySearch={isFuzzySearch}
+            setFuzzySearch={setFuzzySearch}
           />
         ) : (
           <div style={{ 
@@ -97,6 +100,8 @@ function App() {
         onSelectResult={handleGlobalSearchResult} 
         isCaseSensitive={isCaseSensitiveSearch}
         setCaseSensitive={setCaseSensitiveSearch}
+        isFuzzySearch={isFuzzySearch}
+        setFuzzySearch={setFuzzySearch}
       />
     </div>
   );

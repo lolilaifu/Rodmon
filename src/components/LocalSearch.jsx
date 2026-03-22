@@ -8,7 +8,9 @@ export default function LocalSearch({
   worksheetId, 
   onSelectResult,
   isCaseSensitive,
-  setCaseSensitive
+  setCaseSensitive,
+  isFuzzySearch,
+  setFuzzySearch
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -40,7 +42,7 @@ export default function LocalSearch({
     }
 
     const timer = setTimeout(() => {
-      const res = performSearch(query, worksheetId, isCaseSensitive);
+      const res = performSearch(query, worksheetId, isCaseSensitive, isFuzzySearch);
       setResults(res);
       setActiveIndex(res.length > 0 ? 0 : -1);
       
@@ -52,7 +54,7 @@ export default function LocalSearch({
     }, 150); // slight debounce for smooth typing
 
     return () => clearTimeout(timer);
-  }, [query, isOpen, worksheetId, isCaseSensitive]); // REMOVED onSelectResult to fix dependency loop bug
+  }, [query, isOpen, worksheetId, isCaseSensitive, isFuzzySearch]); // REMOVED onSelectResult to fix dependency loop bug
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -138,6 +140,27 @@ export default function LocalSearch({
           }}
         >
           Aa
+        </button>
+
+        <button 
+          onClick={() => setFuzzySearch(!isFuzzySearch)}
+          title={isFuzzySearch ? "Fuzzy Search Enabled" : "Enable Fuzzy Search"}
+          style={{
+            marginLeft: '8px',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            background: isFuzzySearch ? 'rgba(88, 166, 255, 0.2)' : 'transparent',
+            color: isFuzzySearch ? 'var(--accent-color)' : 'var(--text-muted)',
+            border: isFuzzySearch ? '1px solid var(--accent-color)' : '1px solid transparent',
+            fontSize: '13px',
+            fontWeight: 'bold',
+            fontFamily: 'monospace',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            outline: 'none'
+          }}
+        >
+          ~
         </button>
 
         {results.length > 0 && (
