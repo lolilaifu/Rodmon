@@ -10,17 +10,20 @@ export default function GlobalSearch({ isOpen, onClose, onSelectResult, isCaseSe
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-      setQuery('');
-      setResults([]);
-      setActiveIndex(-1);
+      const tId = setTimeout(() => {
+        inputRef.current?.focus();
+        setQuery('');
+        setResults([]);
+        setActiveIndex(-1);
+      }, 50);
+      return () => clearTimeout(tId);
     }
   }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || !query.trim()) {
-      setResults([]);
-      return;
+      const tId = setTimeout(() => setResults([]), 0);
+      return () => clearTimeout(tId);
     }
 
     const timer = setTimeout(() => {

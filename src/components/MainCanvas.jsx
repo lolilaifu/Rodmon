@@ -35,7 +35,7 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
   const [contextMenu, setContextMenu] = useState(null);
 
   // Search state
-  const [activeSearchBlobId, setActiveSearchBlobId] = useState(null);
+  // const [activeSearchBlobId, setActiveSearchBlobId] = useState(null); // REMOVED to satisfy eslint no-unused-vars
 
   const reactFlowWrapper = useRef(null);
   const { project, setViewport } = useReactFlow();
@@ -96,11 +96,34 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
   
   const onConnect = useCallback((params) => setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: 'var(--accent-color)', strokeWidth: 2 } }, eds)), []);
 
-  const handleAddBlob = () => {
+  const handleAddBlob = useCallback(() => {
+    let position = { x: window.innerWidth / 2 - 160, y: window.innerHeight / 2 - 100 };
+    
+    if (reactFlowWrapper.current && project) {
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      
+      // Center of the wrapper relative to its top-left
+      const centerX = bounds.width / 2;
+      const centerY = bounds.height / 2;
+      
+      // Convert to flow coordinates (taking into account zoom and pan)
+      const flowPos = project({ x: centerX, y: centerY });
+      
+      // Add random jitter to avoid perfect overlap when spamming N
+      const jitterX = Math.floor(Math.random() * 41) - 20;
+      const jitterY = Math.floor(Math.random() * 41) - 20;
+      
+      // Node is ~320px wide (160 is half), assume ~200px tall (100 is half)
+      position = {
+        x: flowPos.x - 160 + jitterX,
+        y: flowPos.y - 100 + jitterY
+      };
+    }
+
     const newNode = {
       id: `blob-${uuidv4()}`,
       type: 'blobNode',
-      position: { x: window.innerWidth / 2 - 160, y: window.innerHeight / 2 - 100 },
+      position,
       data: { name: 'New Idea', content: '', color: 'var(--sidebar-bg)' }
     };
     setNodes((nds) => [...nds, newNode]);
@@ -110,7 +133,7 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
       setNodes((nds) => nds.map(n => ({...n, selected: n.id === newNode.id})));
       setSelectedNodeId(newNode.id);
     }, 10);
-  };
+  }, [project]);
 
   const confirmDeleteBlob = useCallback((ids) => {
     const idSet = new Set(Array.isArray(ids) ? ids : [ids]);
@@ -180,7 +203,7 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleAddBlob, setLocalSearchOpen]);
 
   const onNodeContextMenu = useCallback((event, node) => {
     event.preventDefault();
@@ -205,7 +228,6 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
 
   // When a search result is selected, center on it and highlight it
   const handleSelectSearchResult = useCallback((blobId) => {
-    setActiveSearchBlobId(blobId);
     if (!blobId) {
       setNodes(nds => {
         let changed = false;
@@ -247,8 +269,12 @@ function FlowCanvas({ sheetId, isLocalSearchOpen, setLocalSearchOpen, pendingGlo
   // Check if we need to jump to a global search result
   useEffect(() => {
     if (pendingGlobalHighlightId && nodes.length > 0) {
-      handleSelectSearchResult(pendingGlobalHighlightId);
-      clearPendingGlobalHighlight();
+      const highlightId = pendingGlobalHighlightId;
+      const timeoutId = setTimeout(() => {
+        handleSelectSearchResult(highlightId);
+        clearPendingGlobalHighlight();
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
   }, [pendingGlobalHighlightId, nodes, handleSelectSearchResult, clearPendingGlobalHighlight]);
 

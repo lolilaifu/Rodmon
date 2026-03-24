@@ -16,7 +16,8 @@ export default function BlobEditor({ isOpen, nodeId, nodeData, onUpdate, onClose
 
   // If node changes, reset edit mode
   useEffect(() => {
-    setIsEditingData(false);
+    const tId = setTimeout(() => setIsEditingData(false), 0);
+    return () => clearTimeout(tId);
   }, [nodeId]);
 
   if (!isOpen || !nodeData) {

@@ -29,8 +29,21 @@ export default memo(function BlobNode({ data, selected }) {
         overflow: 'hidden'
       }}
     >
-      <Handle type="target" position={Position.Top} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
-      <Handle type="target" position={Position.Left} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
+      {/* Top handles */}
+      <Handle id="top-target" type="target" position={Position.Top} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
+      <Handle id="top-source" type="source" position={Position.Top} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
+      
+      {/* Bottom handles */}
+      <Handle id="bottom-target" type="target" position={Position.Bottom} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
+      <Handle id="bottom-source" type="source" position={Position.Bottom} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
+      
+      {/* Left handles */}
+      <Handle id="left-target" type="target" position={Position.Left} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
+      <Handle id="left-source" type="source" position={Position.Left} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
+      
+      {/* Right handles */}
+      <Handle id="right-target" type="target" position={Position.Right} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
+      <Handle id="right-source" type="source" position={Position.Right} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
       
       <div style={{
         padding: '12px 16px',
@@ -85,8 +98,7 @@ export default memo(function BlobNode({ data, selected }) {
         </div>
       )}
       
-      <Handle type="source" position={Position.Right} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
-      <Handle type="source" position={Position.Bottom} style={{ background: 'var(--accent-color)', width: '8px', height: '8px', border: 'none' }} />
+
     </div>
   );
 });

@@ -35,10 +35,12 @@ export default function LocalSearch({
     if (!isOpen) return;
 
     if (!query.trim()) {
-      setResults([]);
-      setActiveIndex(-1);
-      onSelectResultRef.current(null);
-      return;
+      const tId = setTimeout(() => {
+        setResults([]);
+        setActiveIndex(-1);
+        onSelectResultRef.current(null);
+      }, 0);
+      return () => clearTimeout(tId);
     }
 
     const timer = setTimeout(() => {
